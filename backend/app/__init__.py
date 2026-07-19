@@ -1,0 +1,1 @@
+"""Growth Atlas backend application."""
