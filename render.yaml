@@ -13,7 +13,9 @@ services:
       - key: PYTHON_VERSION
         value: 3.13.5
       - key: NODE_VERSION
-        value: 24.14.1
+        value: 22.22.0
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
       - key: APP_ENV
         value: production
       - key: DEBUG
