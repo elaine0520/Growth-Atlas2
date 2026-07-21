@@ -11,10 +11,10 @@ import {
   type ProfileRecord,
 } from "./types";
 
-type Props = { session: Session; onStartReflection: () => void };
+type Props = { session: Session; onStartDecision: () => void; onOpenMemory: () => void; onOpenGrowthMap: () => void };
 type ViewState = "loading" | "load-error" | "editing" | "confirmed";
 
-function ProfileSetup({ session, onStartReflection }: Props) {
+function ProfileSetup({ session, onStartDecision, onOpenMemory, onOpenGrowthMap }: Props) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<ProfileFormData>(EMPTY_PROFILE_FORM);
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
@@ -92,7 +92,7 @@ function ProfileSetup({ session, onStartReflection }: Props) {
 
   async function signOut() {
     setError("");
-    const { error: signOutError } = await supabase.auth.signOut();
+    const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
     if (signOutError) setError("退出失败，请重试。");
   }
 
@@ -119,12 +119,14 @@ function ProfileSetup({ session, onStartReflection }: Props) {
             <h1>{profile.user_info.nickname ? `${profile.user_info.nickname}，继续向前` : "从一个真实的困惑开始"}</h1>
             <div className="profile-summary">
               <SummaryItem label="当前身份" value={profile.user_info.life_stage} />
-              <SummaryItem label="当前情境" value={profile.current_context} />
+              <SummaryItem label="近期生活重心" value={profile.current_context} />
               <SummaryItem label="成长目标" value={[...profile.short_term_goals, ...profile.long_term_goals].join(" · ")} />
-              <SummaryItem label="重要价值" value={profile.values.join(" · ")} />
+              <SummaryItem label="优先保住的价值" value={profile.values.join(" · ")} />
             </div>
             <p className="saved-note">最后保存：{formatDate(profile.updated_at)}</p>
-            <button className="primary-button" onClick={onStartReflection}>记录一个困惑 <span>→</span></button>
+            <button className="primary-button" onClick={onStartDecision}>创建一次正式决策 <span>→</span></button>
+            <button className="text-button profile-reset" onClick={onOpenGrowthMap}>查看 Decision Timeline</button>
+            <button className="text-button profile-reset" onClick={onOpenMemory}>管理 Decision Memory</button>
             <button className="text-button profile-reset" onClick={() => { setStep(0); setError(""); setView("editing"); }}>编辑个人档案</button>
             {error && <p className="form-message error" role="alert">{error}</p>}
           </section>
@@ -166,15 +168,15 @@ function StepIdentity({ form, set }: { form: ProfileFormData; set: SetField }) {
 }
 
 function StepContext({ form, set }: { form: ProfileFormData; set: SetField }) {
-  return <><Heading number="02" title="你正处于怎样的阶段？" text="描述现在最占据注意力的情境与压力。" /><label className="field-label" htmlFor="current-context">当前情境（确认档案前必填）</label><textarea id="current-context" name="currentContext" value={form.currentContext} maxLength={2000} rows={5} onChange={(e) => set("currentContext", e.target.value)} /><label className="field-label" htmlFor="pressure-sources">主要压力来源（每行一项）</label><textarea id="pressure-sources" name="pressureSources" value={form.pressureSources} rows={4} onChange={(e) => set("pressureSources", e.target.value)} /></>;
+  return <><Heading number="02" title="你最近的生活重心是什么？" text="不用概括整个人生，只描述未来几个月最需要你投入时间和精力的事情。" /><label className="field-label" htmlFor="current-context">最近主要在处理什么？（确认档案前必填）</label><textarea id="current-context" name="currentContext" value={form.currentContext} maxLength={2000} rows={5} placeholder="例如：大三下学期，正在决定是否转专业，同时要准备期末考试。" onChange={(e) => set("currentContext", e.target.value)} /><label className="field-label" htmlFor="pressure-sources">哪些事情正在给你压力？（如有多项，请按回车换行）</label><textarea id="pressure-sources" name="pressureSources" value={form.pressureSources} rows={4} placeholder={"转专业名额有限\n担心延迟毕业\n家人希望我保持现有专业"} onChange={(e) => set("pressureSources", e.target.value)} /></>;
 }
 
 function StepGoals({ form, set }: { form: ProfileFormData; set: SetField }) {
-  return <><Heading number="03" title="你想走向哪里？" text="至少填写一个近期目标或长期方向，之后可以随时调整。" /><label className="field-label" htmlFor="short-term-goals">近期目标（每行一项）</label><textarea id="short-term-goals" name="shortTermGoals" value={form.shortTermGoals} rows={4} onChange={(e) => set("shortTermGoals", e.target.value)} /><label className="field-label" htmlFor="long-term-goals">长期方向（每行一项）</label><textarea id="long-term-goals" name="longTermGoals" value={form.longTermGoals} rows={4} onChange={(e) => set("longTermGoals", e.target.value)} /></>;
+  return <><Heading number="03" title="你想走向哪里？" text="至少填写一个近期目标或长期方向，之后可以随时调整。" /><label className="field-label" htmlFor="short-term-goals">未来 3–12 个月想完成什么？（多项目标请按回车换行）</label><textarea id="short-term-goals" name="shortTermGoals" value={form.shortTermGoals} rows={4} placeholder={"完成转专业申请\n把专业课成绩提升到前 30%"} onChange={(e) => set("shortTermGoals", e.target.value)} /><label className="field-label" htmlFor="long-term-goals">未来几年希望靠近什么方向？（多个方向请按回车换行）</label><textarea id="long-term-goals" name="longTermGoals" value={form.longTermGoals} rows={4} placeholder="例如：找到兼顾兴趣与就业空间的专业方向" onChange={(e) => set("longTermGoals", e.target.value)} /></>;
 }
 
 function StepValues({ form, set, toggleValue }: { form: ProfileFormData; set: SetField; toggleValue: (value: string) => void }) {
-  return <><Heading number="04" title="什么对你真正重要？" text="至少选择一项价值观，并用自己的语言补充对自己的理解。" /><fieldset><legend className="sr-only">价值观（确认档案前必填）</legend><div className="value-grid">{VALUE_OPTIONS.map((item) => <button type="button" key={item.label} className={`value-card ${form.values.includes(item.label) ? "selected" : ""}`} aria-pressed={form.values.includes(item.label)} onClick={() => toggleValue(item.label)}><strong>{item.label}</strong><small>{item.hint}</small><span className="value-check">✓</span></button>)}</div></fieldset><label className="field-label" htmlFor="self-description">自我描述（每行一项）</label><textarea id="self-description" name="selfDescription" value={form.selfDescription} rows={4} onChange={(e) => set("selfDescription", e.target.value)} /></>;
+  return <><Heading number="04" title="做选择时，你更不愿牺牲什么？" text="想象两个方案不能兼得时，你会优先保住什么。至少选择一项，没有标准答案。" /><fieldset><legend className="sr-only">重要取舍（确认档案前必填）</legend><div className="value-grid">{VALUE_OPTIONS.map((item) => <button type="button" key={item.label} className={`value-card ${form.values.includes(item.label) ? "selected" : ""}`} aria-pressed={form.values.includes(item.label)} onClick={() => toggleValue(item.label)}><strong>{item.label}</strong><small>{item.hint}</small><span className="value-check">✓</span></button>)}</div></fieldset><label className="field-label" htmlFor="self-description">哪些具体描述符合现在的你？（可选，多条描述请按回车换行）</label><textarea id="self-description" name="selfDescription" value={form.selfDescription} rows={5} placeholder={"我在目标明确时更容易行动\n面对不确定性时，我会先收集很多信息\n我目前最想改善的是时间安排"} onChange={(e) => set("selfDescription", e.target.value)} /></>;
 }
 
 function ProfileAside({ onSignOut }: { onSignOut: () => Promise<void> }) {
@@ -187,7 +189,7 @@ function SummaryItem({ label, value }: { label: string; value: string | null }) 
 
 function validateForConfirmation(form: ProfileFormData) {
   if (!form.lifeStage) return "请返回第 1 步选择当前身份。";
-  if (!form.currentContext.trim()) return "请返回第 2 步填写当前情境。";
+  if (!form.currentContext.trim()) return "请返回第 2 步，填写最近主要在处理的事情。";
   if (!form.shortTermGoals.trim() && !form.longTermGoals.trim()) return "请返回第 3 步填写至少一个成长目标。";
   if (form.values.length === 0) return "请至少选择一项重要价值。";
   return "";

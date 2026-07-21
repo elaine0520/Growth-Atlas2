@@ -22,6 +22,24 @@ def _headers(settings: Settings, user: CurrentUser, *, return_row: bool = False)
     return headers
 
 
+async def _create_missing_profile(
+    client: httpx.AsyncClient, settings: Settings, user: CurrentUser
+) -> ProfileResponse:
+    """Recover accounts whose Auth user exists but profile trigger did not run."""
+    response = await client.post(
+        f"{settings.supabase_url.rstrip('/')}/rest/v1/profiles",
+        params={"on_conflict": "id"},
+        headers={
+            **_headers(settings, user, return_row=True),
+            "Prefer": "resolution=merge-duplicates,return=representation",
+        },
+        json={"id": str(user.id)},
+    )
+    if response.status_code not in {200, 201} or not response.json():
+        raise HTTPException(status_code=502, detail="Unable to initialize profile")
+    return _to_response(response.json()[0])
+
+
 def _to_response(row: dict[str, Any]) -> ProfileResponse:
     return ProfileResponse(
         id=row["id"],
@@ -73,12 +91,12 @@ async def get_profile(settings: Settings, user: CurrentUser) -> ProfileResponse:
             params={"id": f"eq.{user.id}", "select": "*"},
             headers=_headers(settings, user),
         )
-    if response.status_code != 200:
-        raise HTTPException(status_code=502, detail="Unable to load profile")
-    rows = response.json()
-    if not rows:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    return _to_response(rows[0])
+        if response.status_code != 200:
+            raise HTTPException(status_code=502, detail="Unable to load profile")
+        rows = response.json()
+        if not rows:
+            return await _create_missing_profile(client, settings, user)
+        return _to_response(rows[0])
 
 
 async def update_profile(

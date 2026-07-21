@@ -1,30 +1,43 @@
 import { FormEvent, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
-function AuthScreen() {
+type Props = { onAuthenticated: () => void };
+
+function AuthScreen({ onAuthenticated }: Props) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nickname, setNickname] = useState("");
   const [message, setMessage] = useState("");
+  const [messageError, setMessageError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSubmitting(true);
     setMessage("");
-    const result = mode === "login"
-      ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { nickname: nickname.trim() || undefined } },
-        });
-    setSubmitting(false);
-    if (result.error) {
-      setMessage(result.error.message);
-    } else if (mode === "signup" && !result.data.session) {
-      setMessage("注册成功，请前往邮箱完成验证后登录。");
+    setMessageError(false);
+    try {
+      const result = mode === "login"
+        ? await supabase.auth.signInWithPassword({ email, password })
+        : await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { nickname: nickname.trim() || undefined } },
+          });
+      if (result.error) {
+        setMessageError(true);
+        setMessage(result.error.message);
+      } else if (mode === "signup" && !result.data.session) {
+        setMessage("注册成功，请前往邮箱完成验证后登录。");
+      } else if (result.data.session) {
+        onAuthenticated();
+      }
+    } catch {
+      setMessageError(true);
+      setMessage("暂时无法连接服务，请检查网络后重试。");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -48,9 +61,9 @@ function AuthScreen() {
           <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
           <label className="field-label" htmlFor="password">密码</label>
           <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "login" ? "current-password" : "new-password"} />
-          {message && <p className="form-message" role="status">{message}</p>}
+          {message && <p className="form-message" role={messageError ? "alert" : "status"}>{message}</p>}
           <button className="primary-button auth-submit" disabled={submitting}>{submitting ? "请稍候…" : mode === "login" ? "登录" : "注册"}</button>
-          <button className="text-button auth-switch" type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); }}>
+          <button className="text-button auth-switch" type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setMessage(""); setMessageError(false); }}>
             {mode === "login" ? "还没有账户？创建账户" : "已有账户？返回登录"}
           </button>
         </form>

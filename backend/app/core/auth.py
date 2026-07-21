@@ -25,8 +25,8 @@ async def get_current_user(
 ) -> CurrentUser:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing access token")
-    if not settings.supabase_configured:
-        raise HTTPException(status_code=503, detail="Supabase is not configured")
+    if not settings.supabase_auth_configured:
+        raise HTTPException(status_code=503, detail="Supabase Auth is not configured correctly")
 
     async with httpx.AsyncClient(timeout=10) as client:
         try:

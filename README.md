@@ -1,254 +1,78 @@
 # Growth Atlas
 
-## 产品定位
+Growth Atlas V2 是一个面向重要人生选择的个人决策系统。它帮助用户澄清目标、区分事实与假设、比较方案、形成行动，并在后续反馈中逐步沉淀个人决策模型。
 
-Growth Atlas 是一个面向18-25岁高压力学生的 AI 人生战略顾问。
+它不是心理治疗工具，也不替用户做最终决定。AI 生成的分析和报告在用户确认前都只是可审阅草稿。
 
-它不是心理咨询工具，而是一个帮助用户理解自己、优化决策、持续成长的个人成长系统。
+## 当前状态
 
-通过长期记录用户的问题、行为模式、价值观和成长变化，帮助用户建立属于自己的个人成长地图。
+项目正从 V1 的“反思与成长记录”迁移到 V2 的“决策闭环”。当前代码已经包含：
 
----
+- React 前端与 Supabase 登录、个人档案；
+- FastAPI 后端、档案与反思接口；
+- V2 决策事件的创建、读取、更新与状态流转；
+- 可审阅的 AI 决策报告草稿与 V2 数据库基础；
+- 兼容期内保留的 V1 数据表和页面。
 
-# 核心理念
+## 先从这里读
 
-Reflection → Insight → Decision → Growth
+- 产品方向与 V2 定位：[`PRODUCT_PIVOT.md`](PRODUCT_PIVOT.md)
+- MVP 范围与验收边界：[`MVP_SPEC.md`](MVP_SPEC.md)
+- 软件架构：[`ARCHITECTURE.md`](ARCHITECTURE.md)
+- AI 行为契约：[`AI_CONVERSATION.md`](AI_CONVERSATION.md)
+- V2 数据库与迁移：[`supabase/V2_DATABASE.md`](supabase/V2_DATABASE.md)
+- Beta 部署、RLS 与完整旅程验收：[`docs/BETA_DEPLOYMENT.md`](docs/BETA_DEPLOYMENT.md)
+- 面向贡献者和 AI 的短规则：[`AGENTS.md`](AGENTS.md)
 
-反思 → 洞察 → 决策 → 成长
+`docs/knowledge_base/` 保存产品、理论和创始人背景资料；上面的 Markdown 契约与数据库迁移是日常开发入口。
 
+## 本地启动
 
-用户通过：
+### 1. 后端
 
-记录困惑
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+Copy-Item .env.example .env
+uvicorn app.main:app --reload
+```
 
-↓
+服务地址为 `http://localhost:8000`：
 
-AI结构化提问
+- `/api/health`：进程是否可访问；
+- `/api/ready`：AI 与 Supabase 依赖是否已配置，不返回任何密钥；
+- `/docs`：交互式 API 文档。
 
-↓
+### 2. 前端
 
-深入分析
+```powershell
+cd frontend
+pnpm install
+Copy-Item .env.example .env
+pnpm dev
+```
 
-↓
+默认访问地址为 `http://localhost:5173`。
 
-制定行动方案
+### 3. 数据库
 
-↓
+按文件名顺序应用 `supabase/migrations/`。不要修改已经应用过的迁移；新的数据库变更应新增迁移。详情见 [`supabase/README.md`](supabase/README.md)。
 
-记录成长变化
+## 验证
 
+在项目根目录运行统一检查：
 
-形成长期成长循环。
+```powershell
+.\scripts\check.ps1
+```
 
+它依次执行后端 lint、后端测试和前端类型检查/生产构建。任一步失败都会停止并给出明确错误；只有全部通过才输出成功。
 
----
+## 安全边界
 
-# 产品目标用户
-
-年龄：
-
-18-25岁
-
-
-主要用户：
-
-高压力学生。
-
-包括：
-
-- 对未来迷茫的人
-- 容易内耗的人
-- 想提升自己的人
-- 面临人生选择的人
-
-
----
-
-# 产品定位
-
-Growth Atlas 更像：
-
-AI人生战略顾问
-
-+
-成长教练
-
-
-而不是：
-
-心理咨询师。
-
-
-AI需要：
-
-温暖理解用户，
-
-同时保持理性分析，
-
-帮助用户发现自己可能忽略的信息。
-
-
----
-
-# 核心功能 V1.0
-
-第一版 MVP 包含：
-
-## 1. 初始个人档案建立
-
-用户第一次进入：
-
-通过AI对话建立：
-
-- 基本信息
-- 人生目标
-- 价值观
-- 思维模式
-- 人格特点
-
-
-生成：
-
-Personal Growth Profile
-
-
----
-
-## 2. AI问题分析
-
-用户输入：
-
-每日困惑或者人生问题。
-
-
-AI通过固定流程追问：
-
-### 第一层：事实
-
-发生了什么？
-
-
-### 第二层：情绪
-
-你的感受是什么？
-
-
-### 第三层：认知
-
-你如何理解这件事？
-
-
-### 第四层：决策
-
-有哪些选择？
-
-
-### 第五层：成长
-
-下一步应该如何行动？
-
-
----
-
-## 3. 成长记录
-
-保存：
-
-用户的重要事件。
-
-包括：
-
-- 问题
-- AI分析
-- 用户变化
-
-
----
-
-## 4. 成长报告
-
-生成：
-
-个人成长报告。
-
-
-包含：
-
-六个成长维度：
-
-1. 自我认知
-
-2. 情绪管理
-
-3. 决策能力
-
-4. 行动力
-
-5. 人际关系
-
-6. 学习成长
-
-
----
-
-# AI分析原则
-
-AI不是单纯安慰用户。
-
-AI需要：
-
-1. 理解用户感受
-
-2. 检查事实
-
-3. 发现隐藏假设
-
-4. 提供不同视角
-
-5. 给出行动建议
-
-
----
-
-# 长期愿景
-
-Growth Atlas 希望成为：
-
-个人的 AI 成长知识系统。
-
-
-类似：
-
-Notion AI
-
-但是记录的不是外部知识，
-
-而是：
-
-用户自己的人生经验、成长轨迹和决策模式。
-
-
----
-
-# 技术方向
-
-第一版计划：
-
-Frontend:
-
-React
-
-
-Backend:
-
-Python + FastAPI
-
-
-Database:
-
-Supabase
-
-
-AI:
-
-OpenAI API
+- `KIMI_API_KEY`、Supabase service-role key 等服务端密钥不得进入前端或版本控制。
+- 前端只使用 `VITE_SUPABASE_ANON_KEY` 等可公开配置。
+- 用户数据访问必须保留用户身份校验和 Supabase RLS 边界。
+- 医疗、法律、投资及紧急危险情境必须保留专业求助提示和人工决策点。
